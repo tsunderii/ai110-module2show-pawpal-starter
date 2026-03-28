@@ -193,3 +193,98 @@ def test_detect_conflicts_slot_overload():
     conflicts = scheduler.detect_conflicts()
 
     assert any("overloaded" in c and "afternoon" in c for c in conflicts)
+
+
+# ---------------------------------------------------------------------------
+# Weighted scoring (Challenge 1 algorithm)
+# ---------------------------------------------------------------------------
+
+def _make_scheduler(available_minutes: int = 120) -> tuple[Owner, Pet, Scheduler]:
+    owner = Owner(name="Alex", available_minutes=available_minutes)
+    pet = Pet(name="Buddy", species="dog", age=3)
+    owner.add_pet(pet)
+    return owner, pet, Scheduler(owner)
+
+
+def test_weighted_score_priority_base():
+    """Score for a non-overdue task with no efficiency bonus equals the priority base."""
+    owner, pet, scheduler = _make_scheduler(available_minutes=100)
+    # duration = 50 min → 50/100 = 50% > 25%, so no efficiency bonus
+    task = Task(title="Vet", duration_minutes=50, priority="high", due_date=date.today())
+    pet.add_task(task)
+    assert scheduler.weighted_score(task) == 100.0
+
+
+def test_weighted_score_overdue_bonus():
+    """An overdue task scores higher than an identical on-time task."""
+    owner, pet, scheduler = _make_scheduler(available_minutes=200)
+    on_time = Task(title="Walk", duration_minutes=60, priority="medium", due_date=date.today())
+    overdue = Task(title="Bath", duration_minutes=60, priority="medium",
+                   due_date=date.today() - timedelta(days=3))
+    pet.add_task(on_time)
+    pet.add_task(overdue)
+    assert scheduler.weighted_score(overdue) > scheduler.weighted_score(on_time)
+
+
+def test_weighted_score_overdue_bonus_capped_at_50():
+    """Overdue bonus is capped at 50 regardless of how many days late."""
+    owner, pet, scheduler = _make_scheduler(available_minutes=500)
+    very_overdue = Task(
+        title="Groom", duration_minutes=200, priority="low",
+        due_date=date.today() - timedelta(days=100),
+    )
+    pet.add_task(very_overdue)
+    # base=10, overdue capped at 50, no efficiency bonus (200/500=40%>25%)
+    assert scheduler.weighted_score(very_overdue) == 60.0
+
+
+def test_weighted_score_efficiency_bonus():
+    """A quick task (≤ 25% of available time) earns the +15 efficiency bonus."""
+    owner, pet, scheduler = _make_scheduler(available_minutes=100)
+    quick = Task(title="Feed", duration_minutes=25, priority="low")   # 25/100 = 25% → bonus
+    slow  = Task(title="Walk", duration_minutes=26, priority="low")   # 26/100 = 26% → no bonus
+    pet.add_task(quick)
+    pet.add_task(slow)
+    assert scheduler.weighted_score(quick) == scheduler.weighted_score(slow) + 15
+
+
+def test_weighted_score_no_due_date_gives_zero_overdue():
+    """Tasks without a due_date should not receive any overdue bonus."""
+    owner, pet, scheduler = _make_scheduler(available_minutes=200)
+    task = Task(title="Play", duration_minutes=60, priority="medium", due_date=None)
+    pet.add_task(task)
+    # base=50, no overdue, no efficiency bonus (60/200=30%>25%)
+    assert scheduler.weighted_score(task) == 50.0
+
+
+def test_build_weighted_plan_overdue_outranks_higher_priority():
+    """An overdue medium task should be scheduled before an on-time high task when scores demand it."""
+    owner, pet, scheduler = _make_scheduler(available_minutes=40)
+    # Overdue medium: base 50 + overdue 50 (cap) = 100
+    overdue_medium = Task(
+        title="Overdue groom", duration_minutes=20, priority="medium",
+        due_date=date.today() - timedelta(days=20),
+    )
+    # On-time high, slow: base 100, no overdue, no efficiency bonus (20/40=50%)
+    high_on_time = Task(title="On-time walk", duration_minutes=20, priority="high")
+
+    pet.add_task(overdue_medium)
+    pet.add_task(high_on_time)
+
+    scheduler.build_weighted_plan()
+    # Both fit in 40 min; the overdue medium should appear first (higher score)
+    assert scheduler.schedule[0].title == "Overdue groom"
+
+
+def test_build_weighted_plan_skips_tasks_that_dont_fit():
+    """Tasks that exceed remaining available time go to skipped, not schedule."""
+    owner, pet, scheduler = _make_scheduler(available_minutes=20)
+    pet.add_task(Task(title="Short", duration_minutes=20, priority="high"))
+    pet.add_task(Task(title="Long",  duration_minutes=30, priority="low"))
+
+    scheduler.build_weighted_plan()
+
+    scheduled_titles = [t.title for t in scheduler.schedule]
+    skipped_titles   = [t.title for t in scheduler.skipped]
+    assert "Short" in scheduled_titles
+    assert "Long"  in skipped_titles

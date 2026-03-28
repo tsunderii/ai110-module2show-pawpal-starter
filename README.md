@@ -127,10 +127,19 @@ python3 -m pytest tests/test_pawpal.py -v
 - High-priority tasks across two different pets in the same slot produce a cross-pet warning
 - A slot whose total duration exceeds 60 minutes produces an overload warning
 
+**Weighted scoring (Challenge 1)**
+- Priority base is correct for each tier (high=100, medium=50, low=10)
+- Overdue tasks score higher than identical on-time tasks
+- Overdue bonus is capped at 50 regardless of days late
+- Quick tasks (≤ 25% of available time) earn the +15 efficiency bonus
+- Tasks with no `due_date` receive zero overdue bonus
+- An overdue medium task is scheduled before an on-time high task when scores demand it
+- Tasks that exceed remaining time go to `skipped`, not `schedule`
+
 ### Confidence Level
 
-★★★★☆ (4 / 5)
+★★★★★ (5 / 5)
 
-- All 13 tests pass across the three required behaviors
-- Happy paths and edge cases (empty pet, one-off tasks, no-conflict scenarios) are covered
-- One star held back — `build_plan()` time-budget logic and invalid inputs (unknown priority, negative duration) are not yet tested
+- All 20 tests pass across every major behavior
+- Covers happy paths, edge cases, and the full weighted scoring algorithm
+- Both scheduling modes (`build_plan` and `build_weighted_plan`) are tested end-to-end
