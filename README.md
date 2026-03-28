@@ -1,6 +1,39 @@
 # PawPal+ (Module 2 Project)
 
-You are building **PawPal+**, a Streamlit app that helps a pet owner plan care tasks for their pet.
+> A smart pet-care scheduling app built with Python and Streamlit.
+
+## Features
+
+**Smart Scheduling**
+- **Priority-based planning** — tasks are ranked high → medium → low and packed into the day until `available_minutes` runs out; anything that doesn't fit is surfaced in a "Skipped" list so nothing is forgotten
+- **Chronological sorting** — `sort_by_time()` orders any task list by time slot (morning → afternoon → evening) using a lookup-table key, so the daily plan always reads the way a real day flows
+- **Per-pet filtering** — `filter_tasks(pet_name, completed)` lets the UI show only the tasks belonging to a chosen pet, with optional completion filtering
+
+**Conflict Detection**
+- **Same-pet slot clash** — warns when one pet has two tasks assigned to the same time slot
+- **Cross-pet high-priority clash** — warns when multiple pets have high-priority tasks competing in the same slot
+- **Slot overload** — warns when tasks in a single slot total more than 60 minutes
+- All warnings are displayed as `st.warning` banners before the schedule so the owner can fix conflicts before their day starts
+
+**Recurring Tasks**
+- Tasks can be set to `"once"`, `"daily"`, or `"weekly"` frequency at creation time
+- Marking a daily task complete automatically schedules the next occurrence for tomorrow (`timedelta(days=1)`)
+- Marking a weekly task complete schedules the next occurrence in 7 days (`timedelta(weeks=1)`)
+- One-off tasks are simply marked done with no follow-up
+
+**Professional UI**
+- Owner, pet, and task data persist across Streamlit reruns via `st.session_state`
+- Pending tasks are filtered by pet and sorted chronologically before the plan is built
+- Clean table display with only user-relevant columns (internal flags hidden)
+- Full plain-English explanation of scheduling decisions available via expandable section
+
+---
+
+## 📸 Demo
+
+<a href="/course_images/ai110/pawpal_screenshot.png" target="_blank"><img src='/course_images/ai110/pawpal_screenshot.png' title='PawPal App' width='' alt='PawPal App' class='center-block' /></a>
+
+---
 
 ## Scenario
 
