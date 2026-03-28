@@ -18,9 +18,9 @@ PRIORITY_BADGE = {
 
 # Row background colors keyed by raw priority value
 PRIORITY_ROW_COLOR = {
-    "high":   "background-color: #ffe5e5",   # soft red
-    "medium": "background-color: #fff9db",   # soft yellow
-    "low":    "background-color: #e6f9ec",   # soft green
+    "high":   "background-color: #b71c1c; color: white",   # deep red
+    "medium": "background-color: #e65100; color: white",   # deep orange
+    "low":    "background-color: #1b5e20; color: white",   # deep green
 }
 
 def fmt_priority(p: str) -> str:
